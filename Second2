@@ -1,0 +1,123 @@
+import numpy as np
+import matplotlib.pyplot as plt
+
+# Генерация простых паттернов цифр
+patterns = {
+    '0': np.array([
+        1, 1, 1, 1, 1,
+        1, 0, 0, 0, 1,
+        1, 0, 0, 0, 1,
+        1, 0, 0, 0, 1,
+        1, 1, 1, 1, 1
+    ]),
+    '1': np.array([
+        0, 0, 1, 0, 0,
+        0, 1, 1, 0, 0,
+        1, 0, 1, 0, 0,
+        0, 0, 1, 0, 0,
+        0, 0, 1, 0, 0
+    ]),
+    # Остальные цифры аналогичны...
+}
+
+# Преобразование паттернов в матрицу
+pattern_matrix = np.vstack([patterns[str(i)].reshape(-1) for i in range(10)])
+
+# Создание матрицы связей
+def create_weight_matrix(patterns):
+    N = patterns.shape[1]
+    P = patterns.shape[0]
+    
+    W = np.zeros((N, N))
+    
+    for mu in range(P):
+        xi_mu = patterns[mu]
+        W += np.outer(xi_mu, xi_mu)
+    
+    np.fill_diagonal(W, 0)
+    
+    return W / N
+
+weight_matrix = create_weight_matrix(pattern_matrix)
+
+# Процесс восстановления
+def recall_pattern(weight_matrix, initial_state, max_steps=100):
+    state = initial_state.copy()
+    
+    for _ in range(max_steps):
+        new_state = np.sign(np.dot(state, weight_matrix))
+        if np.all(new_state == state):
+            break
+        state = new_state
+    
+    return state
+
+# Повреждение паттерна
+damaged_digit = pattern_matrix[0].copy()
+noise = np.random.choice([-1, 1], size=len(damaged_digit), p=[0.1, 0.9])
+damaged_digit *= noise
+
+# Восстановление
+restored_digit = recall_pattern(weight_matrix, damaged_digit)
+
+# Визуализация
+def visualize_pattern(pattern):
+    plt.imshow(pattern.reshape(5, 5), cmap='gray', vmin=-1, vmax=1)
+    plt.show()
+import numpy as np
+from sklearn.linear_model import LogisticRegression
+from sklearn.metrics import classification_report
+from sklearn.model_selection import train_test_split
+
+# Загрузим данные MNIST
+from tensorflow.keras.datasets import mnist
+(train_images, train_labels), (test_images, test_labels) = mnist.load_data()
+
+# Приведём изображения к размеру 10x10
+train_images_resized = np.array([img[:10, :10].flatten() for img in train_images])
+test_images_resized = np.array([img[:10, :10].flatten() for img in test_images])
+
+# Преобразуем яркость пикселей в бинарные значения (-1, 1)
+train_images_binary = np.where(train_images_resized > 127, 1, -1)
+test_images_binary = np.where(test_images_resized > 127, 1, -1)
+
+# Разделение данных на тренировочную и валидирующую части
+X_train, X_val, y_train, y_val = train_test_split(
+    train_images_binary, train_labels, test_size=0.2, random_state=42
+)
+# Инициализация классификатора
+classifier = LogisticRegression(multi_class="multinomial", solver="lbfgs", max_iter=1000)
+
+# Обучение классификатора
+classifier.fit(X_train, y_train)
+
+# Оценка качества на валидационной выборке
+val_predictions = classifier.predict(X_val)
+print(classification_report(y_val, val_predictions))
+# Вспомним нашу сеть Хопфилда
+def recall_pattern(weight_matrix, initial_state, max_steps=100):
+    state = initial_state.copy()
+    for _ in range(max_steps):
+        new_state = np.sign(np.dot(state, weight_matrix))
+        if np.all(new_state == state):
+            break
+        state = new_state
+    return state
+
+# Пример интеграции
+def recognize_damaged_digit(damaged_digit, hopfield_weights, classifier):
+    # Восстанавливаем цифру с помощью сети Хопфилда
+    restored_digit = recall_pattern(hopfield_weights, damaged_digit)
+    
+    # Распознаём восстановленную цифру с помощью классификатора
+    predicted_label = classifier.predict([restored_digit])[0]
+    
+    return predicted_label
+
+# Пример использования
+damaged_digit = test_images_binary[0]  # Возьмем первый тестовый образец
+predicted_label = recognize_damaged_digit(damaged_digit, weight_matrix, classifier)
+print(f"Предсказанная цифра: {predicted_label}")
+
+
+visualize_pattern(restored_digit)
