@@ -1,0 +1,95 @@
+import numpy as np
+from sklearn.datasets import fetch_openml
+from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import StandardScaler
+# Загружаем датасет MNIST
+mnist = fetch_openml('mnist_784')
+X, y = mnist["data"], mnist["target"]
+
+# Преобразуем метки в целочисленные значения
+y = y.astype(int)
+
+# Уменьшаем размер изображений до 10x10
+X_resized = []
+for image in X:
+    img = image.reshape((28, 28))
+    resized_img = img[:10, :10].flatten()  # Выбираем первые 10x10 пикселей
+    X_resized.append(resized_img)
+
+X = np.array(X_resized)
+
+# Нормализуем данные
+scaler = StandardScaler()
+X_scaled = scaler.fit_transform(X)
+
+# Разделяем данные на тренировочный и тестовый наборы
+X_train, X_test, y_train, y_test = train_test_split(X_scaled, y, test_size=0.2, random_state=42)
+class SingleLayerPerceptron:
+    def __init__(self, input_size, output_size, learning_rate=0.01):
+        self.input_size = input_size
+        self.output_size = output_size
+        self.learning_rate = learning_rate
+        
+        # Инициализация весов случайными значениями
+        self.weights = np.random.rand(input_size, output_size)
+    
+    # Активационная функция (ступенчатая функция)
+    def activation_function(self, x):
+        return np.where(x >= 0, 1, 0)
+    
+    # Прямой проход
+    def forward(self, inputs):
+        outputs = np.dot(inputs, self.weights)
+        activated_outputs = self.activation_function(outputs)
+        return activated_outputs
+    
+    # Обучение
+    def train(self, X, y, epochs=100):
+        for epoch in range(epochs):
+            for inputs, target in zip(X, y):
+                # Прямой проход
+                predictions = self.forward(inputs)
+                
+                # Расчет ошибки
+                errors = target - predictions
+                
+                # Обновление весов
+                updates = np.outer(inputs, errors) * self.learning_rate
+                self.weights += updates
+            
+            # Периодически выводим прогресс
+            if epoch % 10 == 0:
+                accuracy = self.evaluate(X, y)
+                print(f"Epoch {epoch}: Accuracy = {accuracy:.2f}%")
+    
+    # Оценка точности модели
+    def evaluate(self, X, y):
+        correct_count = 0
+        for inputs, target in zip(X, y):
+            predictions = self.forward(inputs)
+            if np.argmax(predictions) == np.argmax(target):
+                correct_count += 1
+        return correct_count / len(y) * 100
+# Создаем экземпляр перцептрона
+input_size = 100  # 10x10 пикселей
+output_size = 10  # 10 классов цифр (0-9)
+learning_rate = 0.01
+epochs = 100
+
+perceptron = SingleLayerPerceptron(input_size, output_size, learning_rate)
+
+# Конвертируем метки в one-hot encoding
+def convert_to_one_hot(labels):
+    n_labels = len(labels)
+    one_hot_matrix = np.zeros((n_labels, 10))
+    one_hot_matrix[np.arange(n_labels), labels] = 1
+    return one_hot_matrix
+
+y_train_one_hot = convert_to_one_hot(y_train)
+y_test_one_hot = convert_to_one_hot(y_test)
+
+# Запускаем обучение
+perceptron.train(X_train, y_train_one_hot, epochs)
+# Оцениваем точность на тестовом наборе
+test_accuracy = perceptron.evaluate(X_test, y_test_one_hot)
+print(f"\nFinal Test Accuracy: {test_accuracy:.2f}%")
