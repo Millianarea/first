@@ -1,0 +1,70 @@
+import numpy as np
+
+class Perceptron:
+    def __init__(self, learning_rate=0.1):
+        self.weights = None
+        self.learning_rate = learning_rate
+
+    # Функция активации (ступенчатая функция)
+    def activation_function(self, x):
+        return 1 if x >= 0 else 0
+
+    # Предсказание выхода для заданного входа
+    def predict(self, inputs):
+        total = np.dot(inputs, self.weights)
+        return self.activation_function(total)
+
+    # Обучение перцептрона
+    def train(self, training_inputs, labels, epochs=100):
+        num_features = len(training_inputs[0])
+        self.weights = np.random.rand(num_features + 1)  # Добавляем вес для смещения
+
+        for _ in range(epochs):
+            for inputs, label in zip(training_inputs, labels):
+                prediction = self.predict(np.insert(inputs, 0, 1))  # Добавляем 1 для смещения
+                error = label - prediction
+                update = self.learning_rate * error
+                self.weights[1:] += update * inputs
+                self.weights[0] += update
+
+# Логические функции
+training_data_and = [
+    (np.array([0, 0]), 0),
+    (np.array([0, 1]), 0),
+    (np.array([1, 0]), 0),
+    (np.array([1, 1]), 1)
+]
+
+training_data_or = [
+    (np.array([0, 0]), 0),
+    (np.array([0, 1]), 1),
+    (np.array([1, 0]), 1),
+    (np.array([1, 1]), 1)
+]
+
+training_data_not = [
+    (np.array([0]), 1),
+    (np.array([1]), 0)
+]
+
+# Создание и обучение перцептронов
+perceptron_and = Perceptron()
+perceptron_and.train(*zip(*training_data_and))
+
+perceptron_or = Perceptron()
+perceptron_or.train(*zip(*training_data_or))
+
+perceptron_not = Perceptron()
+perceptron_not.train(*zip(*training_data_not))
+
+print("AND:")
+for inputs, expected_output in training_data_and:
+    print(f"{inputs} -> {expected_output}, Predicted: {perceptron_and.predict(np.insert(inputs, 0, 1))}")
+
+print("\nOR:")
+for inputs, expected_output in training_data_or:
+    print(f"{inputs} -> {expected_output}, Predicted: {perceptron_or.predict(np.insert(inputs, 0, 1))}")
+
+print("\nNOT:")
+for inputs, expected_output in training_data_not:
+    print(f"{inputs} -> {expected_output}, Predicted: {perceptron_not.predict(np.insert(inputs, 0, 1))}")
