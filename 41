@@ -1,0 +1,67 @@
+import numpy as np
+
+class CognitiveNeuronGroup:
+    def __init__(self, group_size, feature_map_size):
+        self.group_size = group_size
+        self.feature_map_size = feature_map_size
+        self.weights = np.random.rand(group_size, feature_map_size)
+    
+    def compete(self, input_vector):
+        activations = np.dot(self.weights, input_vector)
+        winner_idx = np.argmax(activations)
+        return winner_idx
+    
+    def learn(self, input_vector, winner_idx):
+        self.weights[winner_idx] += 0.1 * (input_vector - self.weights[winner_idx])
+
+class CognitiveLayer:
+    def __init__(self, num_groups, group_size, feature_map_size):
+        self.groups = [CognitiveNeuronGroup(group_size, feature_map_size) for _ in range(num_groups)]
+    
+    def process_input(self, input_vectors):
+        winners = []
+        for vector in input_vectors:
+            winner_group_ids = [group.compete(vector) for group in self.groups]
+            winners.append(winner_group_ids)
+        return winners
+    
+    def learn(self, input_vectors, winners):
+        for group_id, vector in enumerate(input_vectors):
+            self.groups[group_id].learn(vector, winners[group_id])
+
+class CognitiveNetwork:
+    def __init__(self, layers_config):
+        self.layers = []
+        for config in layers_config:
+            self.layers.append(CognitiveLayer(config['num_groups'], config['group_size'], config['feature_map_size']))
+    
+    def feedforward(self, input_image):
+        current_input = input_image.ravel()
+        for layer in self.layers:
+            current_input = layer.process_input(current_input)
+        return current_input
+    
+    def train(self, input_images):
+        for image in input_images:
+            self.feedforward(image)
+            for layer in reversed(self.layers):
+                # Обучение идёт снизу-вверх
+                pass  # Здесь должна быть логика обратного распространения изменений
+                # Простой пример тренировки сети
+network = CognitiveNetwork(layers_config=[
+    {'num_groups': 10, 'group_size': 5, 'feature_map_size': 10},
+    {'num_groups': 5, 'group_size': 3, 'feature_map_size': 5}
+])
+
+# Генератор случайных изображений
+images = [np.random.rand(10, 10) for _ in range(100)]
+
+# Обучение сети
+for epoch in range(10):
+    for image in images:
+        network.train(image)
+        unknown_images = [np.random.rand(10, 10) for _ in range(10)]
+
+for image in unknown_images:
+    result = network.feedforward(image)
+    print(result)
