@@ -1,0 +1,138 @@
+import numpy as np
+
+# Примеры паттернов для цифр (упрощённые версии)
+patterns = {
+      '0': np.array([
+          1, 1, 1, 1, 1,
+          1, 0, 0, 0, 1,
+          1, 0, 0, 0, 1,
+          1, 0, 0, 0, 1,
+          1, 1, 1, 1, 1
+      ]),
+      '1': np.array([
+          0, 0, 1, 0, 0,
+          0, 1, 1, 0, 0,
+          1, 0, 1, 0, 0,
+          0, 0, 1, 0, 0,
+          0, 0, 1, 0, 0
+      ]),
+      # Аналогично для остальных цифр...
+}
+
+# Преобразование паттернов в матрицу
+pattern_matrix = np.vstack([patterns[str(i)].reshape(-1) for i in range(10)])
+def create_weight_matrix(patterns):
+      N = patterns.shape[1]
+      P = patterns.shape[0]
+      
+      # Матрица связей
+      W = np.zeros((N, N))
+      
+      for mu in range(P):
+          xi_mu = patterns[mu]
+          W += np.outer(xi_mu, xi_mu)
+      
+      # Диагональные элементы устанавливаются в 0
+      np.fill_diagonal(W, 0)
+      
+      return W / N
+
+weight_matrix = create_weight_matrix(pattern_matrix)
+def recall_pattern(weight_matrix, initial_state, max_steps=100):
+    state = initial_state.copy()
+    
+    for _ in range(max_steps):
+        new_state = np.sign(np.dot(state, weight_matrix))
+        if np.all(new_state == state):
+            break
+        state = new_state
+    
+    return state
+
+# Пример повреждения паттерна
+damaged_digit = pattern_matrix[0].copy()
+noise = np.random.choice([-1, 1], size=len(damaged_digit), p=[0.1, 0.9])
+damaged_digit *= noise
+
+# Восстановление
+restored_digit = recall_pattern(weight_matrix, damaged_digit)
+import matplotlib.pyplot as plt
+
+def visualize_pattern(pattern):
+    plt.imshow(pattern.reshape(5, 5), cmap='gray', vmin=-1, vmax=1)
+    plt.show()
+
+visualize_pattern(restored_digit)
+
+
+
+#ИЛИ
+
+import numpy as np
+import matplotlib.pyplot as plt
+
+# Генерация простых паттернов цифр
+patterns = {
+    '0': np.array([
+        1, 1, 1, 1, 1,
+        1, 0, 0, 0, 1,
+        1, 0, 0, 0, 1,
+        1, 0, 0, 0, 1,
+        1, 1, 1, 1, 1
+    ]),
+    '1': np.array([
+        0, 0, 1, 0, 0,
+        0, 1, 1, 0, 0,
+        1, 0, 1, 0, 0,
+        0, 0, 1, 0, 0,
+        0, 0, 1, 0, 0
+    ]),
+    # Остальные цифры аналогичны...
+}
+
+# Преобразование паттернов в матрицу
+pattern_matrix = np.vstack([patterns[str(i)].reshape(-1) for i in range(10)])
+
+# Создание матрицы связей
+def create_weight_matrix(patterns):
+    N = patterns.shape[1]
+    P = patterns.shape[0]
+    
+    W = np.zeros((N, N))
+    
+    for mu in range(P):
+        xi_mu = patterns[mu]
+        W += np.outer(xi_mu, xi_mu)
+    
+    np.fill_diagonal(W, 0)
+    
+    return W / N
+
+weight_matrix = create_weight_matrix(pattern_matrix)
+
+# Процесс восстановления
+def recall_pattern(weight_matrix, initial_state, max_steps=100):
+    state = initial_state.copy()
+    
+    for _ in range(max_steps):
+        new_state = np.sign(np.dot(state, weight_matrix))
+        if np.all(new_state == state):
+            break
+        state = new_state
+    
+    return state
+
+# Повреждение паттерна
+damaged_digit = pattern_matrix[0].copy()
+noise = np.random.choice([-1, 1], size=len(damaged_digit), p=[0.1, 0.9])
+damaged_digit *= noise
+
+# Восстановление
+restored_digit = recall_pattern(weight_matrix, damaged_digit)
+
+# Визуализация
+def visualize_pattern(pattern):
+    plt.imshow(pattern.reshape(5, 5), cmap='gray', vmin=-1, vmax=1)
+    plt.show()
+
+visualize_pattern(restored_digit)
