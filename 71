@@ -1,0 +1,85 @@
+import numpy as np
+import random
+
+# Функция для расчета расстояния между двумя городами
+def calculate_distance(city1, city2):
+    return ((city1[0] - city2[0])**2 + (city1[1] - city2[1])**2)**0.5
+
+# Фундаментальный класс Ant Colony Optimization
+class AntColonyOptimization:
+    def __init__(self, cities, ant_count=10, alpha=1, beta=1, rho=0.5, q=100, generations=100):
+        """
+        cities: список координат городов [(x1, y1), (x2, y2), ...]
+        ant_count: количество муравьев
+        alpha: влияние феромонов
+        beta: влияние расстояния
+        rho: коэффициент испарения феромона
+        q: интенсивность отложения феромона
+        generations: количество итераций
+        """
+        self.cities = cities
+        self.n_cities = len(cities)
+        self.distances = [[calculate_distance(cities[i], cities[j]) for j in range(self.n_cities)] for i in range(self.n_cities)]
+        self.pheromones = np.ones((self.n_cities, self.n_cities))
+        self.alpha = alpha
+        self.beta = beta
+        self.rho = rho
+        self.q = q
+        self.ant_count = ant_count
+        self.generations = generations
+
+    def probability(self, current_city, unvisited_cities):
+        denominator = sum((self.pheromones[current_city][next_city] ** self.alpha) *
+                         (1 / self.distances[current_city][next_city] ** self.beta) for next_city in unvisited_cities)
+        probs = [(self.pheromones[current_city][next_city] ** self.alpha) *
+                 (1 / self.distances[current_city][next_city] ** self.beta) / denominator for next_city in unvisited_cities]
+        return probs
+
+    def construct_tour(self):
+        tour = []
+        visited = set()
+        current_city = random.randint(0, self.n_cities - 1)
+        tour.append(current_city)
+        visited.add(current_city)
+        while len(visited) < self.n_cities:
+            possible_next_cities = [i for i in range(self.n_cities) if i not in visited]
+            probabilities = self.probability(current_city, possible_next_cities)
+            next_city = random.choices(possible_next_cities, weights=probabilities)[0]
+            tour.append(next_city)
+            visited.add(next_city)
+            current_city = next_city
+        return tour
+
+    def run(self):
+        best_path = None
+        best_cost = float('inf')
+        for gen in range(self.generations):
+            paths = []
+            costs = []
+            for _ in range(self.ant_count):
+                path = self.construct_tour()
+                cost = sum(self.distances[path[i]][path[(i+1)%self.n_cities]] for i in range(self.n_cities))
+                paths.append(path)
+                costs.append(cost)
+                if cost < best_cost:
+                    best_cost = cost
+                    best_path = path
+            # Обновляем феромоны
+            self.update_pheromones(paths, costs)
+        return best_path, best_cost
+
+    def update_pheromones(self, paths, costs):
+        delta_pheromone = np.zeros_like(self.pheromones)
+        for path, cost in zip(paths, costs):
+            phero_update = self.q / cost
+            for i in range(self.n_cities):
+                delta_pheromone[path[i]][path[(i+1)%self.n_cities]] += phero_update
+        self.pheromones = (1-self.rho)*self.pheromones + delta_pheromone
+
+
+# Пример использования
+cities = [(60, 200), (180, 200), (80, 180), (140, 180), (20, 160), (100, 160), (200, 160), (140, 140), (40, 120), (100, 120)]
+aco = AntColonyOptimization(cities=cities, ant_count=20, generations=100)
+best_path, best_cost = aco.run()
+print("Лучший маршрут:", best_path)
+print("Длина маршрута:", best_cost)
