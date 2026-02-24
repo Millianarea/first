@@ -1,0 +1,130 @@
+import numpy as np
+from sklearn.model_selection import train_test_split
+from tensorflow.keras.datasets import mnist
+
+# Загрузка данных MNIST
+(train_images, train_labels), (test_images, test_labels) = mnist.load_data()
+
+# Приведение изображений к размеру 10x10
+train_images_resized = np.array([img[:10, :10].flatten() for img in train_images])
+test_images_resized = np.array([img[:10, :10].flatten() for img in test_images])
+
+# Нормализация данных
+train_images_normalized = train_images_resized / 255.0
+test_images_normalized = test_images_resized / 255.0
+
+# Разделение данных на тренировочные и тестовые
+X_train, X_test, y_train, y_test = train_test_split(
+      train_images_normalized, train_labels, test_size=0.2, random_state=42
+)
+class CounterpropagationNetwork:
+      def __init__(self, input_size, competitive_layer_size, output_size, learning_rate=0.1):
+          self.input_size = input_size
+          self.competitive_layer_size = competitive_layer_size
+          self.output_size = output_size
+          self.learning_rate = learning_rate
+          
+          # Инициализация весов
+          self.W_competitive = np.random.rand(competitive_layer_size, input_size)
+          self.W_interpolating = np.random.rand(competitive_layer_size, output_size)
+      
+      # Поиск победителя в конкурентном слое
+      def find_winner(self, input_vector):
+          distances = np.linalg.norm(self.W_competitive - input_vector, axis=1)
+          winner_idx = np.argmin(distances)
+          return winner_idx
+      
+      # Обучение сети
+      def train(self, X, y, epochs=100):
+          for epoch in range(epochs):
+              for input_vector, target in zip(X, y):
+                  # Конкурентный слой
+                  winner_idx = self.find_winner(input_vector)
+                  
+                  # Обновление весов конкурентного слоя
+                  self.W_competitive[winner_idx] += self.learning_rate * (input_vector - self.W_competitive[winner_idx])
+                  
+                  # Интерполирующий слой
+                  self.W_interpolating[winner_idx] += self.learning_rate * (target - self.W_interpolating[winner_idx])
+      
+      # Предсказание класса
+      def predict(self, X):
+          predictions = []
+          for input_vector in X:
+              winner_idx = self.find_winner(input_vector)
+              predicted_class = np.argmax(self.W_interpolating[winner_idx])
+              predictions.append(predicted_class)
+          return np.array(predictions)
+          # Инициализация сети
+cpn = CounterpropagationNetwork(
+      input_size=X_train.shape[1],
+      competitive_layer_size=100,
+      output_size=10,
+      learning_rate=0.1
+)
+
+# Обучение сети
+cpn.train(X_train, y_train, epochs=100)
+
+# Тестирование сети
+cpn_predictions = cpn.predict(X_test)
+
+# Оценка производительности
+from sklearn.metrics import accuracy_score
+
+cpn_accuracy = accuracy_score(y_test, cpn_predictions)
+print(f"Точность сети встречного распространения: {cpn_accuracy:.4f}")
+class OneLayerPerceptron:
+      def __init__(self, input_size, output_size, learning_rate=0.1):
+          self.input_size = input_size
+          self.output_size = output_size
+          self.learning_rate = learning_rate
+          
+          # Инициализация весов
+          self.weights = np.random.rand(input_size, output_size)
+      
+      # Функция активации (ступенчатая функция)
+      def activation_function(self, x):
+          return np.where(x >= 0, 1, 0)
+      
+      # Прямой проход
+      def forward(self, inputs):
+          outputs = np.dot(inputs, self.weights)
+          activated_outputs = self.activation_function(outputs)
+          return activated_outputs
+      
+      # Обучение
+      def train(self, X, y, epochs=100):
+          for epoch in range(epochs):
+              for input_vector, target in zip(X, y):
+                  prediction = self.forward(input_vector)
+                  error = target - prediction
+                  update = self.learning_rate * error
+                  self.weights += np.outer(input_vector, update)
+      
+      # Предсказание
+      def predict(self, X):
+          predictions = []
+          for input_vector in X:
+              prediction = self.forward(input_vector)
+              predicted_class = np.argmax(prediction)
+              predictions.append(predicted_class)
+              # Инициализация перцептрона
+olp = OneLayerPerceptron(
+      input_size=X_train.shape[1],
+      output_size=10,
+      learning_rate=0.1
+)
+
+# Обучение перцептрона
+olp.train(X_train, y_train, epochs=100)
+
+# Тестирование перцептрона
+olp_predictions = olp.predict(X_test)
+
+# Оценка производительности
+olp_accuracy = accuracy_score(y_test, olp_predictions)
+print(f"Точность однослойного перцептрона: {olp_accuracy:.4f}")
+print(f"Сравнение производительности:")
+print(f"- Сеть встречного распространения: {cpn_accuracy:.4f}")
+print(f"- Однослойный перцептрон: {olp_accuracy:.4f}")
