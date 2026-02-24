@@ -1,0 +1,125 @@
+import pygame
+import numpy as np
+import random
+
+# Константы игры
+WIDTH, HEIGHT = 800, 600
+FPS = 30
+PLANT_COLOR = (0, 255, 0)
+HERBIVORE_COLOR = (255, 255, 0)
+CARNIVORE_COLOR = (255, 0, 0)
+
+# Класс растения
+class Plant:
+    def __init__(self, pos):
+        self.pos = pos
+        self.health = 100
+
+    def draw(self, screen):
+        pygame.draw.circle(screen, PLANT_COLOR, self.pos, 5)
+
+# Класс травоядного животного
+class Herbivore:
+    def __init__(self, pos):
+        self.pos = pos
+        self.perceptron = Perceptron(2, 1)
+        self.health = 100
+        self.speed = 2
+
+    def act(self, plants):
+        nearest_plant = min(plants, key=lambda plant: distance(self.pos, plant.pos))
+        direction = normalize(np.subtract(nearest_plant.pos, self.pos))
+        movement = direction * self.speed
+        self.pos = tuple(map(sum, zip(self.pos, movement)))
+        self.health -= 1
+        if distance(self.pos, nearest_plant.pos) <= 10:
+            self.eat(nearest_plant)
+
+    def eat(self, plant):
+        plant.health -= 10
+        self.health += 10
+
+    def draw(self, screen):
+        pygame.draw.circle(screen, HERBIVORE_COLOR, self.pos, 10)
+
+# Класс хищника
+class Carnivore:
+    def __init__(self, pos):
+        self.pos = pos
+        self.perceptron = Perceptron(2, 1)
+        self.health = 100
+        self.speed = 3
+
+    def act(self, herbivores):
+        nearest_herbivore = min(herbivores, key=lambda h: distance(self.pos, h.pos))
+        direction = normalize(np.subtract(nearest_herbivore.pos, self.pos))
+        movement = direction * self.speed
+        self.pos = tuple(map(sum, zip(self.pos, movement)))
+        self.health -= 1
+        if distance(self.pos, nearest_herbivore.pos) <= 10:
+            self.hunt(nearest_herbivore)
+
+    def hunt(self, herbivore):
+        herbivore.health -= 10
+        self.health += 10
+
+    def draw(self, screen):
+        pygame.draw.circle(screen, CARNIVORE_COLOR, self.pos, 15)
+
+# Простой однослойный перцептрон
+class Perceptron:
+    def __init__(self, input_size, output_size):
+        self.weights = np.random.rand(input_size, output_size)
+
+    def activate(self, inputs):
+        return np.dot(inputs, self.weights)
+
+# Вспомогательные функции
+def distance(pos1, pos2):
+    return np.sqrt((pos1[0]-pos2[0])**2 + (pos1[1]-pos2[1])**2)
+
+def normalize(vec):
+    norm = np.linalg.norm(vec)
+    return vec / norm if norm != 0 else vec
+
+# Игра
+def main():
+    pygame.init()
+    screen = pygame.display.set_mode((WIDTH, HEIGHT))
+    clock = pygame.time.Clock()
+
+    plants = [Plant((random.randint(0, WIDTH), random.randint(0, HEIGHT))) for _ in range(50)]
+    herbivores = [Herbivore((random.randint(0, WIDTH), random.randint(0, HEIGHT))) for _ in range(20)]
+    carnivores = [Carnivore((random.randint(0, WIDTH), random.randint(0, HEIGHT))) for _ in range(5)]
+
+    running = True
+    while running:
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                running = False
+
+        screen.fill((0, 0, 0))
+
+        # Действия агентов
+        for herbivore in herbivores:
+            herbivore.act(plants)
+            herbivore.draw(screen)
+
+        for carnivore in carnivores:
+            carnivore.act(herbivores)
+            carnivore.draw(screen)
+
+        for plant in plants:
+            plant.draw(screen)
+
+        # Удаляем умерших
+        plants = [plant for plant in plants if plant.health > 0]
+        herbivores = [h for h in herbivores if h.health > 0]
+        carnivores = [c for c in carnivores if c.health > 0]
+
+        # Обновляем экран
+        pygame.display.flip()
+        clock.tick(FPS)
+
+if __name__ == "__main__":
+    main()
