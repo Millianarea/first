@@ -1,0 +1,51 @@
+import math
+import random
+
+# Целевая функция
+def objective_function(x, y):
+    return 1 / (1 + x**2 + y**2)
+
+# Алгоритм симуляции отжига
+def simulated_annealing(initial_temp, cooling_rate, steps):
+    # Начальная точка (начальное предположение)
+    current_x = random.uniform(-10, 10)
+    current_y = random.uniform(-10, 10)
+    current_value = objective_function(current_x, current_y)
+    
+    temp = initial_temp
+    best_value = current_value
+    best_position = (current_x, current_y)
+    
+    for step in range(steps):
+        # Новая позиция путем небольшого случайного шага
+        candidate_x = current_x + random.gauss(0, 1)
+        candidate_y = current_y + random.gauss(0, 1)
+        candidate_value = objective_function(candidate_x, candidate_y)
+        
+        # Разница в энергиях (целях)
+        energy_diff = candidate_value - current_value
+        
+        # Принятие решения о переходе
+        if energy_diff > 0 or random.random() < math.exp(energy_diff / temp):
+            current_x, current_y = candidate_x, candidate_y
+            current_value = candidate_value
+            
+            # Обновляем лучшее решение
+            if current_value > best_value:
+                best_value = current_value
+                best_position = (current_x, current_y)
+        
+        # Остужаем температуру
+        temp *= cooling_rate
+    
+    return best_position, best_value
+
+# Параметры алгоритма
+initial_temperature = 1000
+cooling_factor = 0.99
+steps = 10000
+
+# Запуск алгоритма
+solution, value = simulated_annealing(initial_temperature, cooling_factor, steps)
+
+print(f"Решение: ({solution[0]}, {solution[1]}), Значение функции: {value}")
